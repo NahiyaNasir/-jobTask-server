@@ -7,7 +7,7 @@ const express = require("express");
 const app = express();
 
 const cors = require("cors");
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 5000;
 //   middle ware
 app.use(cors());
 app.use(express.json());
@@ -52,7 +52,46 @@ async function run() {
         // console.log(result);
         res.send(result);
       });
-      //   get
+      //   get products
+      app.get("/products-by-search-filter-sort",async(req,res)=>{
+        try {
+          const search= req.query.search
+          const brandName=req.query.brandName
+          const category=req.query.category
+          let query={}
+          if(search){
+            query.ProductName={ $regex: search, $options: "i"}
+          }
+          // console.log(search);
+          if(brandName){
+            query.BrandName=brandName
+          }
+          // console.log(brandName);
+          if(category){
+            query.Category=category
+            // console.log(category);
+          }
+
+          const result = await productCollection.find(query).toArray();
+
+          res.send(result);
+        } catch (error) {
+          console.log(error);
+        }
+       
+      })
+//  search, filter  price range
+      app.get("/categorization", async (req, res) => {
+        const brandNames = await productCollection
+            .aggregate([{ $group: { _id: "$BrandName" } }, { $project: { _id: 0, brand: "$_id" } }])
+            .toArray();
+            // console.log(brandNames);
+        const categories = await productCollection
+            .aggregate([{ $group: { _id: "$Category" } }, { $project: { _id: 0, category: "$_id" } }])
+            .toArray();
+            // console.log(categories);
+        res.send( {brandNames,categories} );
+    });
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
